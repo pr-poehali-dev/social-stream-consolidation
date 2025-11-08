@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -6,6 +7,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Icon from '@/components/ui/icon';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
@@ -79,6 +82,7 @@ const connectedSocials = [
 ];
 
 export default function Index() {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('feed');
   const [selectedPlatform, setSelectedPlatform] = useState<string>('all');
   const [connectDialogOpen, setConnectDialogOpen] = useState(false);
@@ -87,6 +91,62 @@ export default function Index() {
   const [createPostDialogOpen, setCreatePostDialogOpen] = useState(false);
   const [newPostContent, setNewPostContent] = useState('');
   const [newPostPlatform, setNewPostPlatform] = useState('VK');
+  const [posts, setPosts] = useState(mockPosts);
+  const [likedPosts, setLikedPosts] = useState<Set<number>>(new Set());
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [postToDelete, setPostToDelete] = useState<number | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingPost, setEditingPost] = useState<any>(null);
+  const [editPostContent, setEditPostContent] = useState('');
+
+  const handleLikePost = (postId: number) => {
+    const newLikedPosts = new Set(likedPosts);
+    if (newLikedPosts.has(postId)) {
+      newLikedPosts.delete(postId);
+    } else {
+      newLikedPosts.add(postId);
+    }
+    setLikedPosts(newLikedPosts);
+
+    setPosts(posts.map(post => {
+      if (post.id === postId) {
+        return {
+          ...post,
+          likes: newLikedPosts.has(postId) ? post.likes + 1 : post.likes - 1
+        };
+      }
+      return post;
+    }));
+  };
+
+  const handleDeletePost = () => {
+    if (postToDelete !== null) {
+      setPosts(posts.filter(post => post.id !== postToDelete));
+      toast({
+        title: 'Пост удалён',
+        description: 'Публикация успешно удалена',
+      });
+      setDeleteDialogOpen(false);
+      setPostToDelete(null);
+    }
+  };
+
+  const handleEditPost = () => {
+    if (editingPost && editPostContent.trim()) {
+      setPosts(posts.map(post => 
+        post.id === editingPost.id 
+          ? { ...post, content: editPostContent }
+          : post
+      ));
+      toast({
+        title: 'Пост обновлён',
+        description: 'Изменения успешно сохранены',
+      });
+      setEditDialogOpen(false);
+      setEditingPost(null);
+      setEditPostContent('');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50 font-body">
@@ -204,7 +264,7 @@ export default function Index() {
                 </div>
               </Card>
 
-              {mockPosts
+              {posts
                 .filter(post => selectedPlatform === 'all' || post.platform === selectedPlatform)
                 .filter(post => 
                   searchQuery === '' || 
@@ -234,18 +294,60 @@ export default function Index() {
                         </Badge>
                       </div>
                       <p className="text-foreground leading-relaxed">{post.content}</p>
-                      <div className="flex items-center gap-6 pt-2">
-                        <button className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors group">
-                          <Icon name="Heart" size={20} className="group-hover:scale-110 transition-transform" />
-                          <span className="font-medium">{post.likes}</span>
-                        </button>
-                        <button className="flex items-center gap-2 text-muted-foreground hover:text-secondary transition-colors group">
-                          <Icon name="MessageCircle" size={20} className="group-hover:scale-110 transition-transform" />
-                          <span className="font-medium">{post.comments}</span>
-                        </button>
-                        <button className="flex items-center gap-2 text-muted-foreground hover:text-accent transition-colors group">
-                          <Icon name="Share2" size={20} className="group-hover:scale-110 transition-transform" />
-                        </button>
+                      <div className="flex items-center justify-between pt-2">
+                        <div className="flex items-center gap-6">
+                          <button 
+                            onClick={() => handleLikePost(post.id)}
+                            className={`flex items-center gap-2 transition-all group ${
+                              likedPosts.has(post.id) 
+                                ? 'text-red-500' 
+                                : 'text-muted-foreground hover:text-primary'
+                            }`}
+                          >
+                            <Icon 
+                              name="Heart" 
+                              size={20} 
+                              className={`group-hover:scale-110 transition-transform ${
+                                likedPosts.has(post.id) ? 'fill-current animate-scale-in' : ''
+                              }`} 
+                            />
+                            <span className="font-medium">{post.likes}</span>
+                          </button>
+                          <button className="flex items-center gap-2 text-muted-foreground hover:text-secondary transition-colors group">
+                            <Icon name="MessageCircle" size={20} className="group-hover:scale-110 transition-transform" />
+                            <span className="font-medium">{post.comments}</span>
+                          </button>
+                          <button className="flex items-center gap-2 text-muted-foreground hover:text-accent transition-colors group">
+                            <Icon name="Share2" size={20} className="group-hover:scale-110 transition-transform" />
+                          </button>
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <Icon name="MoreVertical" size={16} />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => {
+                              setEditingPost(post);
+                              setEditPostContent(post.content);
+                              setEditDialogOpen(true);
+                            }}>
+                              <Icon name="Edit" size={16} className="mr-2" />
+                              Редактировать
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => {
+                                setPostToDelete(post.id);
+                                setDeleteDialogOpen(true);
+                              }}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Icon name="Trash2" size={16} className="mr-2" />
+                              Удалить
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
                   </div>
@@ -605,6 +707,71 @@ export default function Index() {
                 onClick={() => {
                   setCreatePostDialogOpen(false);
                   setNewPostContent('');
+                }}
+              >
+                Отмена
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-heading">Удалить пост?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Это действие нельзя отменить. Пост будет удалён навсегда.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeletePost}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              Удалить
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-2xl">Редактировать пост</DialogTitle>
+            <DialogDescription>
+              Внесите изменения в текст публикации
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-content">Текст поста</Label>
+              <textarea
+                id="edit-content"
+                value={editPostContent}
+                onChange={(e) => setEditPostContent(e.target.value)}
+                placeholder="Текст поста"
+                className="w-full min-h-[120px] p-3 rounded-lg border border-input bg-background resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+              <p className="text-xs text-muted-foreground">{editPostContent.length} символов</p>
+            </div>
+            <div className="flex gap-3 pt-4">
+              <Button
+                className="flex-1 bg-gradient-to-r from-primary to-secondary"
+                onClick={handleEditPost}
+                disabled={!editPostContent.trim()}
+              >
+                <Icon name="Check" size={16} className="mr-2" />
+                Сохранить
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setEditDialogOpen(false);
+                  setEditingPost(null);
+                  setEditPostContent('');
                 }}
               >
                 Отмена
