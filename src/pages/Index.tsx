@@ -83,6 +83,10 @@ export default function Index() {
   const [selectedPlatform, setSelectedPlatform] = useState<string>('all');
   const [connectDialogOpen, setConnectDialogOpen] = useState(false);
   const [selectedSocialToConnect, setSelectedSocialToConnect] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [createPostDialogOpen, setCreatePostDialogOpen] = useState(false);
+  const [newPostContent, setNewPostContent] = useState('');
+  const [newPostPlatform, setNewPostPlatform] = useState('VK');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50 font-body">
@@ -139,10 +143,28 @@ export default function Index() {
           <TabsContent value="feed" className="space-y-6 animate-fade-in">
             <div className="max-w-3xl mx-auto space-y-6">
               <Card className="p-6 bg-gradient-to-br from-primary/10 via-accent/10 to-secondary/10 border-none">
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-4">
                   <div>
                     <h2 className="text-2xl font-heading font-bold mb-2">Лента постов</h2>
                     <p className="text-muted-foreground">Все публикации из подключенных социальных сетей в одном месте</p>
+                  </div>
+                  <Button
+                    className="bg-gradient-to-r from-primary to-secondary whitespace-nowrap"
+                    onClick={() => setCreatePostDialogOpen(true)}
+                  >
+                    <Icon name="Plus" size={16} className="mr-2" />
+                    Создать пост
+                  </Button>
+                </div>
+                <div className="flex flex-col md:flex-row gap-3 mb-4">
+                  <div className="relative flex-1">
+                    <Icon name="Search" size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      placeholder="Поиск по постам..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
                   </div>
                 </div>
                 <div className="flex gap-2 flex-wrap">
@@ -184,6 +206,11 @@ export default function Index() {
 
               {mockPosts
                 .filter(post => selectedPlatform === 'all' || post.platform === selectedPlatform)
+                .filter(post => 
+                  searchQuery === '' || 
+                  post.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  post.author.toLowerCase().includes(searchQuery.toLowerCase())
+                )
                 .map((post, index) => (
                 <Card 
                   key={post.id} 
@@ -516,6 +543,69 @@ export default function Index() {
                 variant="outline"
                 className="flex-1"
                 onClick={() => setConnectDialogOpen(false)}
+              >
+                Отмена
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={createPostDialogOpen} onOpenChange={setCreatePostDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-2xl">Создать новый пост</DialogTitle>
+            <DialogDescription>
+              Напишите текст и выберите платформу для публикации
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="post-content">Текст поста</Label>
+              <textarea
+                id="post-content"
+                value={newPostContent}
+                onChange={(e) => setNewPostContent(e.target.value)}
+                placeholder="Что у вас нового?"
+                className="w-full min-h-[120px] p-3 rounded-lg border border-input bg-background resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+              <p className="text-xs text-muted-foreground">{newPostContent.length} символов</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Платформа для публикации</Label>
+              <div className="flex gap-2 flex-wrap">
+                {['VK', 'Telegram', 'Twitter', 'Instagram'].map((platform) => (
+                  <Button
+                    key={platform}
+                    variant={newPostPlatform === platform ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setNewPostPlatform(platform)}
+                    className={newPostPlatform === platform ? 'bg-gradient-to-r from-primary to-secondary' : ''}
+                  >
+                    {platform}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div className="flex gap-3 pt-4">
+              <Button
+                className="flex-1 bg-gradient-to-r from-primary to-secondary"
+                onClick={() => {
+                  setCreatePostDialogOpen(false);
+                  setNewPostContent('');
+                }}
+                disabled={!newPostContent.trim()}
+              >
+                <Icon name="Send" size={16} className="mr-2" />
+                Опубликовать
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setCreatePostDialogOpen(false);
+                  setNewPostContent('');
+                }}
               >
                 Отмена
               </Button>
