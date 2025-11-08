@@ -5,6 +5,9 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Icon from '@/components/ui/icon';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 const mockPosts = [
   {
@@ -77,6 +80,9 @@ const connectedSocials = [
 
 export default function Index() {
   const [activeTab, setActiveTab] = useState('feed');
+  const [selectedPlatform, setSelectedPlatform] = useState<string>('all');
+  const [connectDialogOpen, setConnectDialogOpen] = useState(false);
+  const [selectedSocialToConnect, setSelectedSocialToConnect] = useState<string>('');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50 font-body">
@@ -133,11 +139,52 @@ export default function Index() {
           <TabsContent value="feed" className="space-y-6 animate-fade-in">
             <div className="max-w-3xl mx-auto space-y-6">
               <Card className="p-6 bg-gradient-to-br from-primary/10 via-accent/10 to-secondary/10 border-none">
-                <h2 className="text-2xl font-heading font-bold mb-2">Лента постов</h2>
-                <p className="text-muted-foreground">Все публикации из подключенных социальных сетей в одном месте</p>
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 className="text-2xl font-heading font-bold mb-2">Лента постов</h2>
+                    <p className="text-muted-foreground">Все публикации из подключенных социальных сетей в одном месте</p>
+                  </div>
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  <Button
+                    variant={selectedPlatform === 'all' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSelectedPlatform('all')}
+                    className={selectedPlatform === 'all' ? 'bg-gradient-to-r from-primary to-secondary' : ''}
+                  >
+                    <Icon name="Grid3x3" size={16} className="mr-2" />
+                    Все
+                  </Button>
+                  <Button
+                    variant={selectedPlatform === 'VK' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSelectedPlatform('VK')}
+                    className={selectedPlatform === 'VK' ? 'bg-[#0077FF] hover:bg-[#0077FF]/90' : ''}
+                  >
+                    VK
+                  </Button>
+                  <Button
+                    variant={selectedPlatform === 'Telegram' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSelectedPlatform('Telegram')}
+                    className={selectedPlatform === 'Telegram' ? 'bg-[#0088cc] hover:bg-[#0088cc]/90' : ''}
+                  >
+                    Telegram
+                  </Button>
+                  <Button
+                    variant={selectedPlatform === 'Twitter' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSelectedPlatform('Twitter')}
+                    className={selectedPlatform === 'Twitter' ? 'bg-[#1DA1F2] hover:bg-[#1DA1F2]/90' : ''}
+                  >
+                    Twitter
+                  </Button>
+                </div>
               </Card>
 
-              {mockPosts.map((post, index) => (
+              {mockPosts
+                .filter(post => selectedPlatform === 'all' || post.platform === selectedPlatform)
+                .map((post, index) => (
                 <Card 
                   key={post.id} 
                   className="p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 animate-slide-up border-none bg-white/80 backdrop-blur-sm"
@@ -298,6 +345,12 @@ export default function Index() {
                     <Button 
                       className={social.connected ? "w-full" : "w-full bg-gradient-to-r from-primary to-secondary"}
                       variant={social.connected ? "outline" : "default"}
+                      onClick={() => {
+                        if (!social.connected) {
+                          setSelectedSocialToConnect(social.name);
+                          setConnectDialogOpen(true);
+                        }
+                      }}
                     >
                       {social.connected ? 'Настроить' : 'Подключить'}
                     </Button>
@@ -433,6 +486,43 @@ export default function Index() {
           </TabsContent>
         </Tabs>
       </main>
+
+      <Dialog open={connectDialogOpen} onOpenChange={setConnectDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-2xl">Подключить {selectedSocialToConnect}</DialogTitle>
+            <DialogDescription>
+              Введите данные для подключения вашего аккаунта {selectedSocialToConnect}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="api-key">API ключ / Токен</Label>
+              <Input id="api-key" placeholder="Введите ваш API ключ" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="username">Имя пользователя (опционально)</Label>
+              <Input id="username" placeholder="Введите имя пользователя" />
+            </div>
+            <div className="flex gap-3 pt-4">
+              <Button
+                className="flex-1 bg-gradient-to-r from-primary to-secondary"
+                onClick={() => setConnectDialogOpen(false)}
+              >
+                <Icon name="Check" size={16} className="mr-2" />
+                Подключить
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setConnectDialogOpen(false)}
+              >
+                Отмена
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
